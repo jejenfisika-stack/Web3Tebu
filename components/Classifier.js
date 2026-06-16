@@ -1,75 +1,43 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { loadModel, classify, lastLoadSource } from '@/lib/model';
+import { useRef, useState } from 'react';
+import { classify } from '@/lib/model';
 import { CLASS_INFO, CONTRACT_ADDRESS } from '@/lib/config';
 import { saveDiagnosis } from '@/lib/web3';
 
 export default function Classifier({ account }) {
-  const [modelReady, setModelReady] = useState(false);
-  const [loadPct, setLoadPct] = useState(0);
-  const [fromCache, setFromCache] = useState(false);
   const [imgUrl, setImgUrl] = useState(null);
+  const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [pending, setPending] = useState(false);   // user klik sebelum model siap
+  const [err, setErr] = useState('');
   const [drag, setDrag] = useState(false);
   const [chainMsg, setChainMsg] = useState('');
-  const imgRef = useRef(null);
   const fileRef = useRef(null);
 
-  // Preload model di latar belakang saat halaman dibuka
-  useEffect(() => {
-    loadModel((frac) => setLoadPct(Math.round(frac * 100)))
-      .then(() => {
-        setModelReady(true);
-        setFromCache(lastLoadSource === 'cache');
-      })
-      .catch((e) => console.error('Gagal load model:', e));
-  }, []);
-
-  // Kalau user sudah menekan "Klasifikasikan" sebelum model siap → jalankan otomatis
-  useEffect(() => {
-    if (modelReady && pending) {
-      setPending(false);
-      runPredict();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modelReady, pending]);
-
-  function pickFile(file) {
-    if (!file || !file.type.startsWith('image/')) return;
+  function pickFile(f) {
+    if (!f || !f.type.startsWith('image/')) return;
     setResult(null);
+    setErr('');
     setChainMsg('');
-    setPending(false);
-    setImgUrl(URL.createObjectURL(file));
+    setFile(f);
+    setImgUrl(URL.createObjectURL(f));
   }
 
-  async function runPredict() {
-    if (!imgRef.current) return;
+  async function handlePredict() {
+    if (!file) return;
     setBusy(true);
     setResult(null);
+    setErr('');
     try {
-      if (!imgRef.current.complete) {
-        await new Promise((r) => (imgRef.current.onload = r));
-      }
-      const res = await classify(imgRef.current);
+      const res = await classify(file);
       setResult(res);
     } catch (e) {
       console.error(e);
-      alert('Gagal memprediksi: ' + e.message);
+      setErr(e.message || 'Gagal memprediksi.');
     } finally {
       setBusy(false);
     }
-  }
-
-  function handlePredictClick() {
-    if (!modelReady) {
-      // model masih loading → tandai pending, nanti auto-jalan
-      setPending(true);
-      return;
-    }
-    runPredict();
   }
 
   async function handleSaveChain() {
@@ -91,20 +59,10 @@ export default function Classifier({ account }) {
 
   return (
     <>
-      {/* Status model — tidak memblokir, hanya informatif */}
-      {!modelReady ? (
-        <div className="alert alert-info">
-          <span className="spinner" />{' '}
-          Menyiapkan model AI… {loadPct > 0 ? `${loadPct}%` : ''}{' '}
-          <span style={{ opacity: 0.8 }}>
-            (unduh ~20 MB sekali saja — Anda sudah bisa pilih gambar sambil menunggu)
-          </span>
-        </div>
-      ) : (
-        <div className="alert alert-info" style={{ background: '#122e1e', color: '#4ade80', borderColor: '#1f5132' }}>
-          ✓ Model siap{fromCache ? ' (dari cache — instan)' : ''}. Silakan unggah gambar daun tebu.
-        </div>
-      )}
+      <div className="alert alert-info">
+        🛰️ Inferensi berjalan di server (Hugging Face) — tidak perlu unduh model,
+        hasil cepat.
+      </div>
 
       {/* Upload */}
       <div className="card">
@@ -133,38 +91,20 @@ export default function Classifier({ account }) {
         {imgUrl && (
           <div className="preview-wrap" style={{ marginTop: 18 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              ref={imgRef}
-              src={imgUrl}
-              alt="preview daun tebu"
-              className="preview"
-              crossOrigin="anonymous"
-            />
+            <img src={imgUrl} alt="preview daun tebu" className="preview" />
             <div className="preview-col">
               <div className="row" style={{ marginTop: 0 }}>
-                <button
-                  className="btn btn-primary"
-                  onClick={handlePredictClick}
-                  disabled={busy || pending}
-                >
-                  {busy
-                    ? <><span className="spinner" /> Menganalisis…</>
-                    : pending
-                      ? <><span className="spinner" /> Menunggu model siap…</>
-                      : '🔍 Klasifikasikan'}
+                <button className="btn btn-primary" onClick={handlePredict} disabled={busy}>
+                  {busy ? <><span className="spinner" /> Menganalisis…</> : '🔍 Klasifikasikan'}
                 </button>
                 <button
                   className="btn btn-ghost"
-                  onClick={() => { setImgUrl(null); setResult(null); setChainMsg(''); setPending(false); }}
+                  onClick={() => { setImgUrl(null); setFile(null); setResult(null); setErr(''); setChainMsg(''); }}
                 >
                   Ganti gambar
                 </button>
               </div>
-              {pending && (
-                <p className="note">
-                  Gambar siap. Begitu model selesai dimuat, prediksi langsung berjalan otomatis.
-                </p>
-              )}
+              {err && <div className="alert alert-err" style={{ marginTop: 14 }}>⚠️ {err}</div>}
               {result && <ResultPanel result={result} info={info} />}
             </div>
           </div>
@@ -224,7 +164,7 @@ function ResultPanel({ result, info }) {
         <span className="dot" style={{ background: info.color }} />
         <div>
           <div className="result-label" style={{ color: info.color }}>{info.label}</div>
-          <div className="result-en">{result.top.name}</div>
+          <div className="result-en">Patogen: <i>{info.pathogen}</i></div>
         </div>
       </div>
       <div className="result-desc">{info.desc}</div>
