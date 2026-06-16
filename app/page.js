@@ -26,8 +26,7 @@ export default function Home() {
       <Classifier account={account} />
 
       <p className="footer">
-        Model: NASNetMobile (TF.js) di Hugging Face · Jaringan: Polygon Amoy Testnet ·
-        Inferensi 100% di browser Anda
+        Model: NASNetMobile di Hugging Face Space (server-side) · Jaringan: Polygon Amoy Testnet
       </p>
     </main>
   );
