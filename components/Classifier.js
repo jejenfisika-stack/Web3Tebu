@@ -5,7 +5,7 @@ import { classify } from '@/lib/model';
 import { CLASS_INFO, CONTRACT_ADDRESS, AMOY, IPFS_GATEWAY } from '@/lib/config';
 import { issueCertificate } from '@/lib/web3';
 
-export default function Classifier({ account }) {
+export default function Classifier({ account, onCertified }) {
   const [imgUrl, setImgUrl] = useState(null);
   const [file, setFile] = useState(null);
   const [farmer, setFarmer] = useState('');
@@ -50,6 +50,7 @@ export default function Classifier({ account }) {
         onStep: (m) => setChainStep(m),
       });
       setCert(c);
+      onCertified && onCertified(c);
     } catch (e) {
       setChainErr(e.message || 'Gagal menerbitkan sertifikat.');
     } finally {

@@ -34,6 +34,7 @@ const LAYERS = [
 
 export default function Home() {
   const [account, setAccount] = useState(null);
+  const [cert, setCert] = useState(null);
 
   return (
     <main className="container">
@@ -62,9 +63,9 @@ export default function Home() {
           <span className="badge2">📦 IPFS Pinata</span>
         </div>
         <div className="blocks">
-          <div className="block"><b>HASH</b>0xa3f…9c2</div>
-          <div className="block"><b>SERTIFIKAT</b>#0042</div>
-          <div className="block"><b>DIAGNOSIS</b>Verified ✓</div>
+          <div className="block"><b>HASH</b>{cert ? `${cert.txHash.slice(0, 6)}…${cert.txHash.slice(-4)}` : 'belum ada'}</div>
+          <div className="block"><b>SERTIFIKAT</b>{cert ? `#${cert.tokenId}` : '—'}</div>
+          <div className="block"><b>DIAGNOSIS</b>{cert ? 'Verified ✓' : 'menunggu'}</div>
         </div>
       </section>
 
@@ -75,7 +76,7 @@ export default function Home() {
           Unggah foto daun tebu — model akan mengklasifikasikan ke 6 kelas dan
           otomatis menolak gambar yang bukan daun tebu.
         </p>
-        <Classifier account={account} />
+        <Classifier account={account} onCertified={setCert} />
       </section>
 
       {/* 6 Penyakit */}
