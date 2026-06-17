@@ -41,7 +41,10 @@ export default function Home() {
       {/* Top bar */}
       <header className="topbar">
         <div className="brand">
-          <div className="logo">🌿</div>
+          <div className="logo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/tebu.jpg" alt="Tebu" />
+          </div>
           <div>
             <h1>Tebu Web3</h1>
             <p>Riset Unggulan · Universitas Jember</p>
