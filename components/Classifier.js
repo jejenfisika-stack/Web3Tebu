@@ -56,14 +56,9 @@ export default function Classifier({ account }) {
 
   return (
     <div className="card">
-      <div className="alert alert-info" style={{ marginTop: 0 }}>
-        🛰️ Inferensi berjalan di server (Hugging Face) — hasil cepat, tanpa unduh model.
-      </div>
-
       {/* Dropzone */}
       <div
         className={`drop ${drag ? 'drag' : ''}`}
-        style={{ marginTop: 14 }}
         onClick={() => fileRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
