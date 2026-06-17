@@ -55,21 +55,25 @@ export default function Home() {
 
       {/* Hero */}
       <section className="hero">
-        <h2>Klasifikasi Penyakit Daun Tebu</h2>
-        <p className="sub">
-          6 penyakit daun tebu terverifikasi AI & tercatat di blockchain.
-          Deteksi cepat, transparan, dan terdesentralisasi untuk pertanian tebu modern.
-        </p>
-        <div className="badges">
-          <span className="badge2">🧠 NASNetMobile · 6-Class · 93.17%</span>
-          <span className="badge2">⛓️ Polygon Amoy</span>
-          <span className="badge2">📦 IPFS Pinata</span>
+        <div className="hero-content">
+          <h2>Klasifikasi Penyakit Daun Tebu</h2>
+          <p className="sub">
+            6 penyakit daun tebu terverifikasi AI & tercatat di blockchain.
+            Deteksi cepat, transparan, dan terdesentralisasi untuk pertanian tebu modern.
+          </p>
+          <div className="badges">
+            <span className="badge2">🧠 NASNetMobile · 6-Class · 93.17%</span>
+            <span className="badge2">⛓️ Polygon Amoy</span>
+            <span className="badge2">📦 IPFS Pinata</span>
+          </div>
+          <div className="blocks">
+            <div className="block"><b>HASH</b>{cert ? `${cert.txHash.slice(0, 6)}…${cert.txHash.slice(-4)}` : 'belum ada'}</div>
+            <div className="block"><b>SERTIFIKAT</b>{cert ? `#${cert.tokenId}` : '—'}</div>
+            <div className="block"><b>DIAGNOSIS</b>{cert ? 'Verified ✓' : 'menunggu'}</div>
+          </div>
         </div>
-        <div className="blocks">
-          <div className="block"><b>HASH</b>{cert ? `${cert.txHash.slice(0, 6)}…${cert.txHash.slice(-4)}` : 'belum ada'}</div>
-          <div className="block"><b>SERTIFIKAT</b>{cert ? `#${cert.tokenId}` : '—'}</div>
-          <div className="block"><b>DIAGNOSIS</b>{cert ? 'Verified ✓' : 'menunggu'}</div>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="hero-img" src="/tebu.jpg" alt="Kebun tebu" />
       </section>
 
       {/* Classifier (interaktif) */}
