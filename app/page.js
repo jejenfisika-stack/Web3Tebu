@@ -150,9 +150,11 @@ export default function Home() {
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 12, opacity: .85 }}>Smart Contract (Polygon Amoy)</div>
-            <span style={{ color: '#d1fae5', fontFamily: 'ui-monospace, monospace', fontSize: 13 }}>
-              segera di-deploy
-            </span>
+            <a href="https://amoy.polygonscan.com/address/0x5622A54103d0Fa3503Ca593C2949cF397A11919E"
+               target="_blank" rel="noreferrer"
+               style={{ color: '#d1fae5', fontFamily: 'ui-monospace, monospace', fontSize: 13 }}>
+              0x5622…919E ✓
+            </a>
           </div>
         </div>
       </section>

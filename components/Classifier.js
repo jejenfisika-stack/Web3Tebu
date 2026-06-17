@@ -2,8 +2,8 @@
 
 import { useRef, useState } from 'react';
 import { classify } from '@/lib/model';
-import { CLASS_INFO, CONTRACT_ADDRESS } from '@/lib/config';
-import { saveDiagnosis } from '@/lib/web3';
+import { CLASS_INFO, CONTRACT_ADDRESS, AMOY, IPFS_GATEWAY } from '@/lib/config';
+import { issueCertificate } from '@/lib/web3';
 
 export default function Classifier({ account }) {
   const [imgUrl, setImgUrl] = useState(null);
@@ -14,45 +14,52 @@ export default function Classifier({ account }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [drag, setDrag] = useState(false);
-  const [chainMsg, setChainMsg] = useState('');
+
+  // Blockchain state
+  const [chainBusy, setChainBusy] = useState(false);
+  const [chainStep, setChainStep] = useState('');
+  const [chainErr, setChainErr] = useState('');
+  const [cert, setCert] = useState(null);
   const fileRef = useRef(null);
 
   function pickFile(f) {
     if (!f || !f.type.startsWith('image/')) return;
-    setResult(null); setErr(''); setChainMsg('');
+    setResult(null); setErr(''); setCert(null); setChainErr('');
     setFile(f);
     setImgUrl(URL.createObjectURL(f));
   }
 
   async function handlePredict() {
     if (!file) return;
-    setBusy(true); setResult(null); setErr('');
+    setBusy(true); setResult(null); setErr(''); setCert(null);
     try {
       setResult(await classify(file));
     } catch (e) {
-      console.error(e);
       setErr(e.message || 'Gagal memprediksi.');
     } finally {
       setBusy(false);
     }
   }
 
-  async function handleSaveChain() {
+  async function handleIssue() {
     if (!result || result.status === 'ood') return;
-    setChainMsg('');
+    setChainErr(''); setCert(null); setChainBusy(true);
     try {
-      const hash = await saveDiagnosis({
-        label: result.top.name, confidence: result.top.prob,
-        farmer, location,
+      const c = await issueCertificate({
+        file, result, farmer, location,
+        onStep: (m) => setChainStep(m),
       });
-      setChainMsg(`✅ Tersimpan di blockchain. Tx: ${hash}`);
+      setCert(c);
     } catch (e) {
-      setChainMsg('⚠️ ' + e.message);
+      setChainErr(e.message || 'Gagal menerbitkan sertifikat.');
+    } finally {
+      setChainBusy(false); setChainStep('');
     }
   }
 
   const info = result ? CLASS_INFO[result.top.name] : null;
   const contractReady = CONTRACT_ADDRESS && CONTRACT_ADDRESS.length > 0;
+  const explorer = AMOY.blockExplorerUrls[0];
 
   return (
     <div className="card">
@@ -71,16 +78,13 @@ export default function Classifier({ account }) {
                onChange={(e) => pickFile(e.target.files[0])} />
       </div>
 
-      {/* Data petani */}
       <div className="field">
         <label>Nama Petani</label>
-        <input value={farmer} onChange={(e) => setFarmer(e.target.value)}
-               placeholder="mis. Pak Suka" />
+        <input value={farmer} onChange={(e) => setFarmer(e.target.value)} placeholder="mis. Pak Suka" />
       </div>
       <div className="field">
         <label>Lokasi Kebun</label>
-        <input value={location} onChange={(e) => setLocation(e.target.value)}
-               placeholder="mis. Bondowoso, Jawa Timur" />
+        <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="mis. Bondowoso, Jawa Timur" />
       </div>
 
       {imgUrl && (
@@ -93,7 +97,7 @@ export default function Classifier({ account }) {
                 {busy ? <><span className="spinner" /> Menganalisis…</> : '🔍 Klasifikasikan'}
               </button>
               <button className="btn btn-ghost"
-                onClick={() => { setImgUrl(null); setFile(null); setResult(null); setErr(''); setChainMsg(''); }}>
+                onClick={() => { setImgUrl(null); setFile(null); setResult(null); setErr(''); setCert(null); setChainErr(''); }}>
                 Ganti gambar
               </button>
             </div>
@@ -107,19 +111,29 @@ export default function Classifier({ account }) {
       {result && result.status !== 'ood' && (
         <div style={{ marginTop: 20, borderTop: '1px solid var(--line)', paddingTop: 18 }}>
           <h4 style={{ marginBottom: 6 }}>⛓️ Terbitkan Sertifikat di Blockchain</h4>
-          <p className="note">Simpan hasil diagnosis sebagai sertifikat permanen di Polygon Amoy.</p>
+          <p className="note">Foto disimpan di IPFS, hasil diagnosis dicetak jadi NFT permanen di Polygon Amoy.</p>
+
           {!contractReady ? (
-            <div className="alert alert-info">
-              Smart contract belum di-deploy. Fitur ini aktif setelah tahap deploy kontrak (Remix → Polygon Amoy).
-            </div>
+            <div className="alert alert-info">Smart contract belum dikonfigurasi.</div>
           ) : !account ? (
             <div className="alert alert-warn">Hubungkan wallet MetaMask dulu (tombol di pojok kanan atas).</div>
+          ) : cert ? (
+            <div className="alert alert-info">
+              ✅ <b>Sertifikat #{cert.tokenId} berhasil diterbitkan!</b><br />
+              🔗 <a href={`${explorer}/tx/${cert.txHash}`} target="_blank" rel="noreferrer">Lihat transaksi di PolygonScan</a><br />
+              🖼️ <a href={`${IPFS_GATEWAY}${cert.imageCid}`} target="_blank" rel="noreferrer">Foto di IPFS</a>{' · '}
+              <a href={`${IPFS_GATEWAY}${cert.metadataCid}`} target="_blank" rel="noreferrer">Metadata</a>
+            </div>
           ) : (
-            <div className="row"><button className="btn btn-purple" onClick={handleSaveChain}>💾 Terbitkan sertifikat</button></div>
-          )}
-          {chainMsg && (
-            <div className={`alert ${chainMsg.startsWith('✅') ? 'alert-info' : 'alert-warn'}`}
-                 style={{ wordBreak: 'break-all' }}>{chainMsg}</div>
+            <>
+              <div className="row">
+                <button className="btn btn-purple" onClick={handleIssue} disabled={chainBusy}>
+                  {chainBusy ? <><span className="spinner" /> Memproses…</> : '💾 Terbitkan sertifikat'}
+                </button>
+              </div>
+              {chainBusy && chainStep && <div className="alert alert-info">⏳ {chainStep}</div>}
+              {chainErr && <div className="alert alert-err">⚠️ {chainErr}</div>}
+            </>
           )}
         </div>
       )}
